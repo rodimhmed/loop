@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f0e8">
+  <meta name="description" content="محاضرات إدارة الأعمال والجدول الدراسي.">
+  <title>محاضرات إدارة الأعمال</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="site-title" href="#" aria-label="محاضرات إدارة الأعمال">محاضرات إدارة الأعمال</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <div class="intro-rule"></div>
+      <h1>محاضرات إدارة الأعمال</h1>
+      <div class="intro-rule"></div>
+    </section>
+
+    <section class="schedule-section" aria-labelledby="scheduleTitle">
+      <div class="section-head">
+        <h2 id="scheduleTitle">جدول المحاضرات</h2>
+        <span class="section-mark">الفصل الأول</span>
+      </div>
+      <div class="table-wrap">
+        <table class="schedule-table">
+          <thead><tr><th>المادة</th><th>التوقيت</th><th>الإعادة</th></tr></thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+      <p class="holiday-note">ملاحظة: يومي الأربعاء والخميس عطلة الجامعة الرسمية.</p>
+    </section>
+
+    <section class="lectures-section" aria-labelledby="lecturesTitle">
+      <div class="section-head">
+        <h2 id="lecturesTitle">المحاضرات والملفات</h2>
+        <span class="section-mark">PDF</span>
+      </div>
+      <label class="search-box">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+        <input id="searchInput" type="search" placeholder="ابحث عن محاضرة أو مادة..." autocomplete="off">
+      </label>
+      <nav id="breadcrumbs" class="breadcrumbs" aria-label="مسار المجلد"></nav>
+      <div id="libraryGrid" class="library-grid" aria-live="polite"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <span class="empty-pdf">PDF</span>
+        <p>هذا المجلد فارغ حالياً.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© <span id="year"></span> محاضرات إدارة الأعمال</span>
+    <a href="https://www.instagram.com/rs6sc/" target="_blank" rel="noopener noreferrer">Instagram · @rs6sc</a>
+  </footer>
+
+  <script src="library.json.js"></script>
+  <script src="schedule.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

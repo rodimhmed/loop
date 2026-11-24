@@ -14,17 +14,236 @@
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[ch]));
 
-  // Render the class timetable from schedule.js.
+
+  // Group all classes by weekday.
   const scheduleBody = document.getElementById('scheduleBody');
   const schedule = Array.isArray(window.SCHEDULE) ? window.SCHEDULE : [];
-  if (scheduleBody) {
-    scheduleBody.innerHTML = schedule.map(row => `
-      <tr>
-        <td>${safe(row.subject)}</td>
-        <td>${safe(row.time)}</td>
-        <td class="${row.repeat === '—' ? 'no-repeat' : ''}">${safe(row.repeat)}</td>
-      </tr>`).join('');
+  const weekdayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const weekdayOrder = [...weekdayNames];
+  const dayGroups = new Map(weekdayOrder.map(day => [day, []]));
+
+  function addScheduleOccurrences(value, subject) {
+    String(value ?? '').split(/[،,]/).forEach(part => {
+      const cleaned = part.trim();
+      const match = cleaned.match(/^([^:]+):\s*(.+)$/);
+      let day;
+      let time;
+
+      if (match && dayGroups.has(match[1].trim())) {
+        day = match[1].trim();
+        time = match[2].trim();
+      } else {
+        day = addScheduleOccurrences.lastDay;
+        time = cleaned;
+      }
+
+      if (!day || !dayGroups.has(day)) return;
+      addScheduleOccurrences.lastDay = day;
+      dayGroups.get(day).push({ subject, time });
+    });
   }
+
+  schedule.forEach(row => {
+    addScheduleOccurrences.lastDay = null;
+    addScheduleOccurrences(row.time, row.subject);
+
+    if (row.repeat && row.repeat !== '—') {
+      addScheduleOccurrences.lastDay = null;
+      addScheduleOccurrences(row.repeat, row.subject);
+    }
+  });
+
+  function timeSortValue(value) {
+    const match = String(value).match(/(\d{1,2})(?::(\d{2}))?/);
+    if (!match) return Number.MAX_SAFE_INTEGER;
+
+    let hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+
+    // Treat 1:00 and 2:00 as afternoon times in this timetable.
+    if (hour >= 1 && hour <= 5) hour += 12;
+
+    return hour * 60 + minute;
+  }
+
+  if (!document.getElementById('schedule-day-card-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'schedule-day-card-styles';
+    styles.textContent = `
+      .schedule-table {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+      .schedule-table thead {
+        display: none !important;
+      }
+      .schedule-table tbody {
+        display: block !important;
+        width: 100% !important;
+      }
+      #scheduleBody tr.schedule-day-row {
+        display: block !important;
+        width: 100% !important;
+      }
+      #scheduleBody tr.schedule-day-row > td {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+      }
+      #scheduleBody .schedule-day-card {
+        margin: 0 0 12px;
+        padding: 15px 17px;
+        border: 1px solid var(--border, #e5e0d4);
+        border-radius: 13px;
+        background: var(--card, #fffdf8);
+        text-align: right;
+      }
+      #scheduleBody .schedule-day-card.is-marked {
+        border-color: #899568;
+        background: rgba(120, 134, 76, .09);
+        box-shadow: 0 0 0 2px rgba(120, 134, 76, .10);
+      }
+      #scheduleBody .schedule-day-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0 0 11px;
+        color: var(--text, #38382f);
+        font-size: 17px;
+        font-weight: 700;
+      }
+      #scheduleBody .schedule-day-dot {
+        width: 9px;
+        height: 9px;
+        flex: 0 0 9px;
+        border-radius: 50%;
+        background: #899568;
+        box-shadow: 0 0 0 4px rgba(137, 149, 104, .16);
+      }
+      #scheduleBody .schedule-class-list {
+        display: grid;
+        gap: 0;
+      }
+      #scheduleBody .schedule-class-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 9px 0;
+        border-top: 1px solid var(--border, #e5e0d4);
+      }
+      #scheduleBody .schedule-class-item:first-child {
+        border-top: 0;
+      }
+      #scheduleBody .schedule-class-subject {
+        color: var(--text, #38382f);
+        font-weight: 600;
+      }
+      #scheduleBody .schedule-class-time {
+        flex: 0 0 auto;
+        color: var(--muted, #777568);
+        font-size: .94em;
+        white-space: nowrap;
+      }
+      @media (max-width: 650px) {
+        .table-wrap {
+          overflow: visible !important;
+        }
+        #scheduleBody .schedule-day-card {
+          padding: 13px 14px;
+        }
+        #scheduleBody .schedule-class-item {
+          align-items: flex-start;
+        }
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+
+  function getMarkedDay() {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (now.getHours() >= 15) {
+      target.setDate(target.getDate() + 1);
+    }
+
+    // Skip days without classes, including holidays.
+    for (let offset = 0; offset < 7; offset++) {
+      const candidate = new Date(target);
+      candidate.setDate(target.getDate() + offset);
+      const dayName = weekdayNames[candidate.getDay()];
+
+      if ((dayGroups.get(dayName) || []).length) {
+        return dayName;
+      }
+    }
+
+    return null;
+  }
+
+  function renderScheduleByDay() {
+    if (!scheduleBody) return;
+
+    const markedDay = getMarkedDay();
+
+    scheduleBody.innerHTML = weekdayOrder
+      .filter(day => dayGroups.get(day).length)
+      .map(day => {
+        const bySubject = new Map();
+
+        dayGroups.get(day).forEach(item => {
+          if (!bySubject.has(item.subject)) {
+            bySubject.set(item.subject, []);
+          }
+          bySubject.get(item.subject).push(item.time);
+        });
+
+        const classes = Array.from(bySubject, ([subject, times]) => ({
+          subject,
+          time: times
+            .sort((a, b) => timeSortValue(a) - timeSortValue(b))
+            .join('، ')
+        })).sort((a, b) => timeSortValue(a.time) - timeSortValue(b.time));
+
+        const marked = day === markedDay;
+
+        return `
+          <tr class="schedule-day-row">
+            <td colspan="3">
+              <section class="schedule-day-card ${marked ? 'is-marked' : ''}">
+                <h3 class="schedule-day-title">
+                  ${marked ? '<span class="schedule-day-dot" aria-hidden="true"></span>' : ''}
+                  ${safe(day)}
+                </h3>
+                <div class="schedule-class-list">
+                  ${classes.map(item => `
+                    <div class="schedule-class-item">
+                      <span class="schedule-class-subject">${safe(item.subject)}</span>
+                      <span class="schedule-class-time">${safe(item.time)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </section>
+            </td>
+          </tr>`;
+      }).join('');
+  }
+
+  renderScheduleByDay();
+
+  let lastMarkedDay = getMarkedDay();
+
+  window.setInterval(() => {
+    const currentMarkedDay = getMarkedDay();
+
+    if (currentMarkedDay !== lastMarkedDay) {
+      lastMarkedDay = currentMarkedDay;
+      renderScheduleByDay();
+    }
+  }, 60 * 1000);
 
   function renderBreadcrumbs() {
     crumbs.innerHTML = pathStack.map((folder, i) => {
